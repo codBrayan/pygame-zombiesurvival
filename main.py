@@ -3,7 +3,6 @@ import os
 import random
 from functions import *
 
-
 try:
     pygame.init()
     os.system("cls")
@@ -14,12 +13,14 @@ except:
 
 
 #ASSETS
+# - boolVariants
 gaming = True
-notDied = True
-hitBox = False
+event_Hit = False
 hitSword = False
 left = False
 right = False
+newRound = False
+
 # - layout screen
 heightScreen = 250
 widthScreen = 300
@@ -48,51 +49,74 @@ widthPlayer = 25
 imageZombie = pygame.image.load("files/zombie.png")
 widthZombie = 30
 heightZombie = 40
-zombiepositionX=(random.randrange(0,250)-widthZombie)
-zombiepositionY=(random.randrange(0,300)-heightZombie)
-zombiePosition = (zombiepositionX,zombiepositionY)
+lifeZombie = 0
+
+blood = pygame.image.load("files/blood.png")
 
 
-def damageArea(hit,left,right, playerPosX,playerPosY):
+def hitBox(hit,left,right, playerPosX,playerPosY,listPixelsZombie):
     hitSword = False
-    hitSwordLeft = False
-
+    hitSword_in_Left = False
     if left:
         areaHit_X = playerPosX
         areaHit_Y = playerPosY+25
-    if right:
+        hitSword_in_Left=True
+    elif right:
         areaHit_X = playerPosX+30
         areaHit_Y = playerPosY+25
-        hitSwordLeft=True
-
     if hit:
-        pygame.draw.circle(screen,white,(areaHit_X,areaHit_Y),25)
+        pygame.draw.circle(screen,white,(areaHit_X,areaHit_Y),25) # shows a HitBox for user
 
         pixelsAreaHit_X = list(range(areaHit_X, areaHit_X + 50))
         pixelsAreaHit_Y = list(range(areaHit_Y, areaHit_Y + 25))
-        pixelsXZombie = list(range(zombiepositionX, zombiepositionX + widthZombie))
-        pixelsYZombie = list(range(zombiepositionY, zombiepositionY + heightZombie))
+        keys = len(listPixelsZombie)
 
-        AreaHitX = len(list(set(pixelsAreaHit_X) & set(pixelsXZombie)))
-        AreaHitY = len(list(set(pixelsAreaHit_Y) & set(pixelsYZombie)))
+        for zombie in range(0, keys+1):
+            pixelsXZombie = list(range(listPixelsZombie[f'{zombie}'][0], listPixelsZombie[f'{zombie}'][0] + widthZombie))
+            pixelsYZombie = list(range(listPixelsZombie[f'{zombie}'][1], listPixelsZombie[f'{zombie}'][1] + heightZombie))
 
-        if AreaHitX and AreaHitY > 0:
-            hitSword = True
+            AreaHitX = len(list(set(pixelsAreaHit_X).intersection (set(pixelsXZombie))))
+            AreaHitY = len(list(set(pixelsAreaHit_Y).intersection (set(pixelsYZombie))))
+
+            if AreaHitX and AreaHitY > 0:
+                hitSword = True
+                return hitSword, hitSword_in_Left
+            else:
+                print("deu ruim")
     
-    return hitSword, hitSwordLeft
-    
 
-def hit_in_zombie(lifeZombie,leftHit, zombiepos_X, zombiePos_Y):
-    if lifeZombie < 2:
-        if leftHit:
-            zombiepos_X += 10
-            zombiePos_Y += 10
-        else:
-            zombiepos_X -= 10
-            zombiePos_Y += 10
+def damage_in_zombie(lifeZombie, leftHit, zombiepos_X, zombiePos_Y):
+    if leftHit:
+        zombiepos_X -= 10
+        zombiePos_Y += 10
+        lifeZombie += 1
+    else:
+        zombiepos_X += 10
+        zombiePos_Y += 10
+        lifeZombie += 1
 
-    return zombiepos_X, zombiePos_Y
-    
+    return lifeZombie, zombiepos_X, zombiePos_Y
+
+
+def spawnZombies(quantZombie):
+    dictBoxZombies = {}
+
+    for index in range(0,quantZombie):
+        zombiepositionX=(random.randrange(0,250))
+        if zombiepositionX > widthZombie:
+            zombiepositionX -= widthZombie
+        zombiepositionY=(random.randrange(0,300))
+        if zombiepositionY > heightPlayer:
+            zombiepositionY -= heightPlayer
+
+
+        screen.blit(imageZombie,(zombiepositionX,zombiepositionY))
+        cordintZombie=[zombiepositionX,zombiepositionY]
+        dictBoxZombies.update({f'{index}' : cordintZombie})
+
+
+    return dictBoxZombies 
+        
 
 
 while gaming:
@@ -104,7 +128,7 @@ while gaming:
             gaming = False
         elif event.type == pygame.KEYDOWN:
             if event.key == pygame.K_SPACE:
-                hitBox = True
+                event_Hit = True
             elif event.key == pygame.K_w:
                 playerMovementY = speed_displacmt * -1
             elif event.key == pygame.K_s:
@@ -129,27 +153,31 @@ while gaming:
             playerPositionX = playerPositionX + playerMovementX
         if playerPositionY + playerMovementY + heightPlayer < heightScreen and playerPositionY + playerMovementY > 0:
             playerPositionY = playerPositionY + playerMovementY
-        
-        if zombiepositionX + widthZombie < widthScreen and zombiepositionX > 0:
-            zombiepositionX = zombiepositionX
-        else:
-            zombiepositionX = widthScreen - widthZombie
-        if zombiepositionY + heightZombie <= heightScreen and zombiepositionY >= 0:
-            zombiepositionY = zombiepositionY
-        else:
-            zombiepositionY = heightScreen - heightZombie
 
-        
         screen.fill(darkBlue) 
-        hitSword, hitSwordLeft = damageArea(hitBox, left,right, playerPositionX, playerPositionY)
         screen.blit(imagePlayerGaming,(playerPositionX,playerPositionY))
-        screen.blit(imageZombie,(zombiepositionX,zombiepositionY))
+        dictZombies_in_Round = spawnZombies(2)
 
-        if hitSword:
-            zombiepositionX, zombiepositionY =  hit_in_zombie(1,hitSwordLeft, zombiepositionX,zombiepositionY)
+        hitTrue, hitTrueLeft = hitBox(event_Hit, left,right, playerPositionX, playerPositionY, dictZombies_in_Round) #Analising if it hit
 
+        zombiepositionX = (list(dictZombies_in_Round.values))[1]
+        zombiepositionY = (list(dictZombies_in_Round.values))[0]
 
-    hitSword = False
-    hitBox = False
+        if zombiepositionX + widthZombie > widthScreen:
+            zombiepositionX = widthScreen - widthZombie
+        if zombiepositionX < 0:
+            zombiepositionX = 0
+        if zombiepositionY + heightZombie > heightScreen:
+            zombiepositionY = heightScreen - heightZombie
+        if zombiepositionY < 0:
+            zombiepositionY = 0
+        
+        
+
+        if hitTrue:
+            lifeZombie = damage_in_zombie(lifeZombie,hitTrueLeft, zombiepositionX,zombiepositionY)
+        
+
+    event_Hit = False
     pygame.display.update()
     clock.tick(40)
