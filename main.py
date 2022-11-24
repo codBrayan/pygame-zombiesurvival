@@ -209,7 +209,7 @@ while gaming:
                   - Função que deleta os zumbis quando o player mata
                   - Função que faz os zombies irem de atras da posição do player
 
-                Prazo estimado de conclusão: 26/11
+                Prazo estimado de conclusão: 26/11.
                 '''
 
                 # Analysing hit
