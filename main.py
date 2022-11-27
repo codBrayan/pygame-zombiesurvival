@@ -60,22 +60,28 @@ blood = pygame.image.load("files/blood.png")
 def hitBox(left,right, playerPosX,playerPosY,CoordsZombie):
     hitSword = False
     hitSword_in_Left = False
+    areaHit_X = playerPosX-5
+    areaHit_Y = playerPosY
+    areaDrawCircleX = playerPosX 
+    areaDrawCircleY = playerPosY
+
     if left:
-        areaHit_X = playerPosX
-        areaHit_Y = playerPosY+25
+        areaHit_X = playerPosX-20
+        areaHit_Y = playerPosY
+        areaDrawCircleY +=20
         hitSword_in_Left=True
-    elif right:
-        areaHit_X = playerPosX+30
-        areaHit_Y = playerPosY+25
-    else:
-        areaHit_X = playerPosX+15
-        areaHit_Y = playerPosY+10
+    if right:
+        areaHit_X = playerPosX+5
+        areaHit_Y = playerPosY
+        areaDrawCircleX +=25
+        areaDrawCircleY +=20
 
-    pygame.draw.rect(screen, white, (areaHit_X, areaHit_Y, 50, 50))
-    circle = pygame.draw.circle(screen,black,(areaHit_X,areaHit_Y),25) # shows a HitBox for user
+    pygame.draw.circle(screen,white,(areaDrawCircleX,areaDrawCircleY),22) # shows a HitBox for user
+    #pygame.draw.rect(screen, white, (areaHit_X, areaHit_Y, 40, 40)) # HITBOX
 
-    pixelsAreaHit_X = list((circle))
+    pixelsAreaHit_X = list(range(areaHit_X, areaHit_X + 50))
     pixelsAreaHit_Y = list(range(areaHit_Y, areaHit_Y + 25))
+
 
     for zombie in CoordsZombie:
         coords=CoordsZombie.get(zombie)
@@ -89,12 +95,14 @@ def hitBox(left,right, playerPosX,playerPosY,CoordsZombie):
 
         if AreaHitX and AreaHitY > 0:
             hitSword = True
-            return hitSword, hitSword_in_Left, coords
+            return hitSword, hitSword_in_Left, coords, zombie
 
     zombie = [0, 0]
-    return hitSword, hitSword_in_Left, zombie
+    return hitSword, hitSword_in_Left, zombie,  zombie
 
 
+def spawnPlayer(posX, posY):
+    screen.blit(imagePlayerGaming,(posX,posY))  
 
 def damage_in_zombie(leftHit, zombieHit):
     if leftHit:
@@ -170,7 +178,7 @@ while gaming:
             playerPositionY = playerPositionY + playerMovementY
 
         screen.fill(darkBlue) 
-        screen.blit(imagePlayerGaming,(playerPositionX,playerPositionY))  
+        spawnPlayer(playerPositionX, playerPositionY)
 
         #Assets of zombies on screen / Verify lifes / Create list of coords
         for zombie in dictZombies_in_Round:
@@ -193,13 +201,14 @@ while gaming:
 
         # Analysing hit
         if event_Hit:
-            hitTrue, hitTrueLeft, zombieHitted = hitBox(left,right, playerPositionX, playerPositionY, dictZombies_in_Round) #Analising if it hit
+            hitTrue, hitTrueLeft, CoordZombieHitd , numberZombieHitd = hitBox(left,right, playerPositionX, playerPositionY, dictZombies_in_Round) #Analising if it hit
             
             if hitTrue:
-                damage_in_zombie(hitTrueLeft, zombieHitted)
+                lifeZombie = dictLife_Zombies.get(numberZombieHitd)
+                damage_in_zombie(hitTrueLeft, CoordZombieHitd)
+                dictLife_Zombies.update({f'{numberZombieHitd}':lifeZombie-1})
 
-        right = False
-        Left = False
+
         event_Hit = False
         pygame.display.update()
         clock.tick(40)
