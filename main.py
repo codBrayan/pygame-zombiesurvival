@@ -1,6 +1,8 @@
+
 import pygame
 import os
 import random
+import time
 
 try:
     pygame.init()
@@ -13,7 +15,7 @@ except:
 
 #ASSETS
 # - boolVariants
-round = True
+round = False
 gaming = True
 event_Hit = False
 hitSword = False
@@ -45,12 +47,13 @@ playerMovementY = 0
 speed_displacmt = 4 
 heightPlayer = 35
 widthPlayer = 25
+firstLifePlayer = 5
 
 # - zombies
 imageZombie = pygame.image.load("files/zombie.png")
 widthZombie = 30
 heightZombie = 40
-lifeZombie = 5
+firstLifeZombie = 5
 
 blood = pygame.image.load("files/blood.png")
 
@@ -129,21 +132,43 @@ def spawnZombies(quantZombie):
         dictBoxZombies.update({f'{index}' : cordintZombie})
     # Creating a dict with their respective lifes
     for zombie in dictBoxZombies:
-        dictLifeZombies.update({f'{zombie}' : lifeZombie})
+        dictLifeZombies.update({f'{zombie}' : firstLifeZombie})
     return dictBoxZombies, dictLifeZombies
+
+def analisingLifePlayer(playerPosX, playerPosY, dictCoordZomb, lifePlayer):##################
+    for zombie in dictCoordZomb:
+        coords = dictCoordZomb.get(zombie)
+        boxZombieX = coords[0]+10
+        boxZombieY = coords[1]+10
+        areaXzombie = list(range(boxZombieX, coords[0] + widthZombie-10))
+        areaYzombie = list(range(boxZombieY, coords[1] + heightZombie-10))
+        areaXPlayer = list(range(playerPosX+10, playerPosX + widthPlayer-10))
+        areaYPlayer = list(range(playerPosY+10, playerPosY + heightPlayer-10))
+
+        areaColisionX = len(list(set(areaXPlayer) & (set(areaXzombie))))
+        areaColisionY = len(list(set(areaYPlayer) & (set(areaYzombie))))
+
+        if areaColisionX and areaColisionY > 0:
+            lifePlayer -= 1
+            print(lifePlayer)
+    return lifePlayer#############################################################################
+    
         
 
 
-while gaming:
-    levelRound = 1
+while True:
+    ticks = pygame.time.get_ticks()
+    levelRound = 0
 
-    # create a aleatory spawn Zombie
-    if round:
-        quantZombie = levelRound + 2
-        dictZombies_in_Round, dictLife_Zombies = spawnZombies((quantZombie))
-
-    while round:
-        
+    while gaming:
+        if round == False:
+            levelRound += 1
+            quantZombie = levelRound + 2
+            lifePlayer = firstLifePlayer
+            dictZombies_in_Round, dictLife_Zombies = spawnZombies((quantZombie))
+            print(dictLife_Zombies)
+            round = True
+            
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
@@ -170,45 +195,55 @@ while gaming:
             elif event.type == pygame.KEYUP:
                     playerMovementX = 0
                     playerMovementY = 0
- 
-        #Assets of player on screen
-        if playerPositionX + playerMovementX + widthPlayer < widthScreen and playerPositionX + playerMovementX > 0:
-            playerPositionX = playerPositionX + playerMovementX
-        if playerPositionY + playerMovementY + heightPlayer < heightScreen and playerPositionY + playerMovementY > 0:
-            playerPositionY = playerPositionY + playerMovementY
 
-        screen.fill(darkBlue) 
-        spawnPlayer(playerPositionX, playerPositionY)
+        if round:
+            #Assets of player on screen
+            if playerPositionX + playerMovementX + widthPlayer < widthScreen and playerPositionX + playerMovementX > 0:
+                playerPositionX = playerPositionX + playerMovementX
+            if playerPositionY + playerMovementY + heightPlayer < heightScreen and playerPositionY + playerMovementY > 0:
+                playerPositionY = playerPositionY + playerMovementY
 
-        #Assets of zombies on screen / Verify lifes / Create list of coords
-        for zombie in dictZombies_in_Round:
-            coord = dictZombies_in_Round.get(zombie)
-            life = (dictLife_Zombies.get(zombie))
-            zombiepositionX = coord[0]
-            zombiepositionY = coord[1]
+            screen.fill(darkBlue) 
+            spawnPlayer(playerPositionX, playerPositionY)
 
-            if zombiepositionX + widthZombie > widthScreen:
-                zombiepositionX = widthScreen - widthZombie
-            if zombiepositionX < 0:
-                zombiepositionX = 0
-            if zombiepositionY + heightZombie > heightScreen:
-                zombiepositionY = heightScreen - heightZombie 
-            if zombiepositionY < 0:
-                zombiepositionY = 0
+            #Assets of zombies on screen / Verify lifes / Create list of coords
+            for zombie in dictZombies_in_Round:
+                coord = dictZombies_in_Round.get(zombie)
+                life = (dictLife_Zombies.get(zombie))
 
-            if life > 0:
+                if coord[0] + widthZombie > widthScreen:
+                    coord[0] = widthScreen - widthZombie
+                if coord[0] < 0:
+                    coord[0] = 0
+                if coord[1] + heightZombie > heightScreen:
+                    coord[1] = heightScreen - heightZombie 
+                if coord[1] < 0:
+                    coord[1] = 0
+
+                zombiepositionX = coord[0]
+                zombiepositionY = coord[1]
+
                 screen.blit(imageZombie,(zombiepositionX,zombiepositionY))
 
-        # Analysing hit
-        if event_Hit:
-            hitTrue, hitTrueLeft, CoordZombieHitd , numberZombieHitd = hitBox(left,right, playerPositionX, playerPositionY, dictZombies_in_Round) #Analising if it hit
+
+            # Analysing hit
+            if event_Hit:
+                hitTrue, hitTrueLeft, CoordZombieHitd , numberZombieHitd = hitBox(left,right, playerPositionX, playerPositionY, dictZombies_in_Round) #Analising if it hit
+                
+                if hitTrue:
+                    lifeZombie = dictLife_Zombies.get(numberZombieHitd)
+                    damage_in_zombie(hitTrueLeft, CoordZombieHitd)
+                    dictLife_Zombies.update({f'{numberZombieHitd}':lifeZombie-1})
+                    if lifeZombie == 0:
+                        del dictZombies_in_Round[numberZombieHitd]
+                        del dictLife_Zombies[numberZombieHitd]
             
-            if hitTrue:
-                lifeZombie = dictLife_Zombies.get(numberZombieHitd)
-                damage_in_zombie(hitTrueLeft, CoordZombieHitd)
-                dictLife_Zombies.update({f'{numberZombieHitd}':lifeZombie-1})
+            lifePlayer = analisingLifePlayer(playerPositionX, playerPositionY, dictZombies_in_Round, lifePlayer)
+            if lifePlayer == 0:
+                round = False
 
-
+            if len(dictZombies_in_Round) == 0:
+                round = False
         event_Hit = False
         pygame.display.update()
         clock.tick(40)
